@@ -1,32 +1,53 @@
-import { beforeEach, describe, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import nock from 'nock';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 import TicketItem from './TicketItem';
 
+import { API_BASE_URL } from '../api';
+
 import { Ticket } from '../types';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const context = describe;
 
 describe('TicketItem', () => {
+  let requestTicketId = '';
+
   const ticket: Ticket = {
-    id: 1,
+    id: 'ticket-1',
     title: 'TITLE',
     description: 'DESCRIPTION',
     status: 'open',
     comments: [
-      { id: 1, content: 'COMMENT' },
+      { id: 'comment-1', content: 'COMMENT' },
     ],
   };
 
   beforeEach(() => {
-    vi.resetAllMocks();
+    requestTicketId = '';
+
+    nock(API_BASE_URL)
+      .patch(`/tickets/${ticket.id}`)
+      .reply(200, (uri, body: any) => {
+        const parts = uri.split('/');
+        requestTicketId = parts[parts.length - 1];
+        return {
+          ...ticket,
+          status: body.status,
+        };
+      });
   });
 
   function renderTicketItem() {
-    render(
-      <TicketItem ticket={ticket} />
-    );
+    const queryClient = new QueryClient();
+
+    render((
+      <QueryClientProvider client={queryClient}>
+        <TicketItem ticket={ticket} />
+      </QueryClientProvider>
+    ));
   }
 
   it('renders title and description', () => {
@@ -36,12 +57,6 @@ describe('TicketItem', () => {
     screen.getByText('DESCRIPTION');
   });
 
-  it('renders status', () => {
-    renderTicketItem();
-
-    screen.getByText(/Open/);
-  });
-
   it('renders comments', () => {
     renderTicketItem();
 
@@ -49,18 +64,14 @@ describe('TicketItem', () => {
   });
 
   context('when user clicks toggle button', () => {
-    it('calls API', () => {
+    it('calls API', async () => {
       renderTicketItem();
 
-      // TODO: Write test code here
-    });
-  });
+      fireEvent.click(screen.getByRole('button', { name: /Open/ }));
 
-  context('when user submits comment', () => {
-    it('calls API', () => {
-      renderTicketItem();
-
-      // TODO: Write test code here
+      await waitFor(() => {
+        expect(requestTicketId).toBe(ticket.id);
+      });
     });
   });
 });

@@ -1,9 +1,10 @@
-import { memo, useEffect } from 'react';
+import { memo, useState } from 'react';
 
 import CommentList from './CommentList';
 import CommentForm from './CommentForm';
 
 import useUpdateTicketStatus from '../hooks/useUpdateTicketStatus';
+import useComments from '../hooks/useComments';
 
 import { Ticket } from '../types';
 
@@ -11,9 +12,22 @@ function TicketItem({ ticket }: {
   ticket: Ticket;
 }) {
   const updateTicketStatus = useUpdateTicketStatus();
+  const [shouldRefetchComments, setShouldRefetchComments] = useState(false);
+
+  const { comments } = useComments(ticket.id, shouldRefetchComments);
+  const nowComments = shouldRefetchComments ? comments : ticket.comments;
+
+  console.log(' comments', comments);
 
   const handleClick = () => {
-    updateTicketStatus(/* TODO: Implement updateTicketStatus */);
+    updateTicketStatus({
+      id: ticket.id,
+      status: ticket.status === 'open' ? 'closed' : 'open',
+    });
+  };
+
+  const handleCommentAdded = () => {
+    setShouldRefetchComments(true);
   };
 
   return (
@@ -26,8 +40,8 @@ function TicketItem({ ticket }: {
       >
         {ticket.status === 'open' ? 'Open' : 'Closed'}
       </button>
-      <CommentList comments={ticket.comments} />
-      <CommentForm ticketId={ticket.id} />
+      <CommentList comments={nowComments} />
+      <CommentForm ticketId={ticket.id} onCommentAdded={handleCommentAdded} />
     </li>
   );
 }

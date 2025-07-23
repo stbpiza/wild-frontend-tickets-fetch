@@ -5,8 +5,9 @@ import SubmitButton from './SubmitButton';
 
 import useCreateComment from '../hooks/useCreateComment';
 
-export default function CommentForm({ ticketId }: {
-  ticketId: number;
+export default function CommentForm({ ticketId, onCommentAdded }: {
+  ticketId: string;
+  onCommentAdded: () => void;
 }) {
   const createComment = useCreateComment();
 
@@ -17,7 +18,11 @@ export default function CommentForm({ ticketId }: {
     const formData = new FormData(form);
     const content = formData.get('content') as string;
 
-    createComment({ ticketId, content });
+    createComment({ ticketId, content }, {
+      onSuccess: () => {
+        onCommentAdded(); 
+      },
+    });
 
     form.reset();
   };
